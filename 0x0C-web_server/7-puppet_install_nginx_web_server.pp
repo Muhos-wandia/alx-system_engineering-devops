@@ -1,6 +1,40 @@
-# Installs a Nginx server
+#!/usr/bin/env bash
+# Configure server using puppet
 
-exec {'install':
-  provider => shell,
-  command  => 'sudo apt-get -y update ; sudo apt-get -y install nginx ; echo "Hello World!" | sudo tee /var/www/html/index.nginx-debian.html ; sudo sed -i "s/server_name _;/server_name _;\n\trewrite ^\/redirect_me https:\/\/github.com\/Tolulope05 permanent;/" /etc/nginx/sites-available/default ; sudo service nginx start',
+# defines a Puppet class called nginx_server that 
+#  encapsulates the configuration for the Nginx server.
+class nginx_server {
+  package { 'nginx':
+    ensure => installed,
+  }
+
+#  manages the Nginx service.
+  service { 'nginx':
+    ensure => running,
+    enable => true,
+    require => Package['nginx'],
+  }
+# manages the Nginx configuration file located at /etc/nginx/sites-available/default.
+  file { '/etc/nginx/sites-available/default':
+    ensure  => present,
+    content => "
+      server {
+        listen      80 default_server;
+        listen      [::]:80 default_server;
+        root        /var/www/html;
+        index       index.html index.htm;
+
+        location / {
+          return 200 'Hello World!';
+        }
+
+        location /redirect_me {
+          return 301 http://cuberule.com/;
+        }
+      }
+    ",
+    notify => Service['nginx'],
+  }
 }
+#  includes the nginx_server class, ensuring that it gets applied.
+include nginx_server
